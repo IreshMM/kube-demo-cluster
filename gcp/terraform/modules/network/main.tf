@@ -39,7 +39,7 @@ resource "google_compute_firewall" "allow_external" {
   depends_on = [ google_compute_network.kube_network, google_compute_subnetwork.kube_subnet ]
 }
 
-resource "google_compute_address" "static_address" {
+resource "google_compute_address" "public_address" {
   name = "kube-external-ip"
   region = var.cluster_region
 }
