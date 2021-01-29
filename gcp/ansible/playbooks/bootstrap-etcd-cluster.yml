@@ -1,0 +1,41 @@
+---
+  - name: Download and install etcd
+    become: true
+    hosts: control_plane
+    tasks:
+      - name: download-etcd binaries
+        get_url:
+          url: 'https://github.com/etcd-io/etcd/releases/download/v3.4.10/etcd-v3.4.10-linux-amd64.tar.gz'
+          dest: "/tmp"
+      - name: extract etcd binaries
+        unarchive:
+          src: /tmp/etcd-v3.4.10-linux-amd64.tar.gz
+          dest: "/tmp"
+          remote_src: yes
+      - name: install etcd binaries
+        shell:
+          cmd: "mv /tmp/etcd-v3.4.10-linux-amd64/etcd* /usr/local/bin"
+  
+  - name: Configure etcd server
+    become: true
+    hosts: control_plane
+    tasks:
+      - name: make etcd directories
+        file:
+          path: "{{ item }}"
+          mode: 0700
+          state: directory
+        loop:
+          - /etc/etcd
+          - /var/lib/etcd
+      - name: copy kubernetes cert and key
+        copy:
+          src: "{{ playbook_dir }}/../../../certs/{{ item }}"
+          dest: /etc/etcd/
+        loop:
+          - kubernetes.pem
+          - kubernetes-key.pem
+          - ca.pem
+      - name: Run config script
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-etcd.sh"
