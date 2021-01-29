@@ -1,0 +1,10 @@
+---
+  - name: Configure Kubelet authorization
+    hosts: control_plane[0]
+    tasks:
+      - name: Create ClusterRole
+        script:
+          cmd: "{{ playbook_dir }}/scripts/create-api-server-to-kubelet-cluster-role.sh"
+      - name: Bind ClusterRole to kubernetes user (API Server)
+        script:
+          cmd: "{{ playbook_dir }}/scripts/bind-api-server-user-to-cluster-role.sh"
