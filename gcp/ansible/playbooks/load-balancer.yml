@@ -1,0 +1,16 @@
+---
+  - name: Enable http health checks
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Update all the packages
+        apt:
+          name: "*"
+          state: latest
+      - name: Install nginx webserver
+        apt:
+          name: nginx
+          state: latest
+      - name: Configure nginx
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-nginx.sh"
