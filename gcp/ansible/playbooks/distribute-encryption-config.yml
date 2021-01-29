@@ -1,0 +1,8 @@
+---
+  - name: distribute encryption config
+    hosts: control_plane
+    tasks:
+      - name: copy encryption config
+        copy:
+          src: "{{ playbook_dir }}/../../../encryption-config/encryption-config.yml"
+          dest: "~"
