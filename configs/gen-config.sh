@@ -2,7 +2,7 @@
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-mv ${DIR}/../certs/*.pem $DIR
+cp ${DIR}/../certs/*.pem $DIR
 
 KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kube-external-ip \
     --region $(gcloud config get-value compute/region) \
