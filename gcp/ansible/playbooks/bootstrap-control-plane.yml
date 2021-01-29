@@ -81,3 +81,11 @@
           systemctl daemon-reload
           systemctl enable kube-apiserver kube-controller-manager kube-scheduler
           systemctl start kube-apiserver kube-controller-manager kube-scheduler
+
+  - name: Configure kubectl access
+    hosts: control_plane
+    tasks:
+      - name: Copy admin kubeconfig
+        copy: 
+          src: "{{ playbook_dir }}/../../../configs/admin.kubeconfig"
+          dest: "~"
