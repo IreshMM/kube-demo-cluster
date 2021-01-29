@@ -5,4 +5,4 @@
       - name: copy encryption config
         copy:
           src: "{{ playbook_dir }}/../../../encryption-config/encryption-config.yml"
-          dest: "~"
+          dest: "/tmp/encryption-config.yml"

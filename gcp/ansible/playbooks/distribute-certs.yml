@@ -1,44 +1,50 @@
 ---
-  - name: distribute-ca-cert
-    hosts: control_plane:workers
-    tasks:
-      - name: copy ca cert
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/ca.pem"
-          dest: "~"
-    
-  - name: distribute-worker-certs
-    hosts: workers
-    tasks:
-      - name: copy instance cert
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/{{ hostname }}.pem"
-          dest: "~"
-      - name: copy instance private key
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/{{ hostname }}-key.pem"
-          dest: "~"
-  
-  - name: distribute-control-plane-certs
-    hosts: control_plane
-    tasks:
-      - name: copy ca private key
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/ca-key.pem"
-          dest: "~"
-      - name: copy api server cert
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/kubernetes.pem"
-          dest: "~"
-      - name: copy api server private key
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/kubernetes-key.pem"
-          dest: "~"
-      - name: copy service account
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/service-account.pem"
-          dest: "~"
-      - name: copy service account private key
-        copy:
-          src: "{{ playbook_dir }}/../../../certs/service-account-key.pem"
-          dest: "~"
+- name: distribute-ca-cert
+  vars:
+    dest: /tmp/certs/
+  hosts: control_plane:workers
+  tasks:
+    - name: copy ca cert
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/ca.pem"
+        dest: "{{ dest }}"
+
+- name: distribute-worker-certs
+  hosts: workers
+  vars:
+    dest: /tmp/certs/
+  tasks:
+    - name: copy instance cert
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/{{ hostname }}.pem"
+        dest: "{{ dest }}"
+    - name: copy instance private key
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/{{ hostname }}-key.pem"
+        dest: "{{ dest }}"
+
+- name: distribute-control-plane-certs
+  hosts: control_plane
+  vars:
+    dest: /tmp/certs/
+  tasks:
+    - name: copy ca private key
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/ca-key.pem"
+        dest: "{{ dest }}"
+    - name: copy api server cert
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/kubernetes.pem"
+        dest: "{{ dest }}"
+    - name: copy api server private key
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/kubernetes-key.pem"
+        dest: "{{ dest }}"
+    - name: copy service account cert
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/service-account.pem"
+        dest: "{{ dest }}"
+    - name: copy service account private key
+      copy:
+        src: "{{ playbook_dir }}/../../../certs/service-account-key.pem"
+        dest: "{{ dest }}"

@@ -1,28 +1,32 @@
 ---
   - name: distribute worker configs
+    vars:
+      dest: /tmp/configs
     hosts: workers
     tasks:
       - name: copy kubelet config
         copy:
           src: "{{ playbook_dir }}/../../../configs/{{ hostname }}.kubeconfig"
-          dest: "~"
+          dest: "{{ dest }}"
       - name: copy kube proxy config
         copy:
           src: "{{ playbook_dir }}/../../../configs/kube-proxy.kubeconfig"
-          dest: "~"
+          dest: "{{ dest }}"
 
   - name: distribute control plane configs
     hosts: control_plane
+    vars:
+      dest: /tmp/configs
     tasks:
       - name: copy admin kubeconfig for kubectl
         copy:
           src: "{{ playbook_dir }}/../../../configs/admin.kubeconfig"
-          dest: "~"
+          dest: "{{ dest }}"
       - name: copy controller manager config
         copy:
           src: "{{ playbook_dir }}/../../../configs/kube-controller-manager.kubeconfig"
-          dest: "~"
+          dest: "{{ dest }}"
       - name: copy scheduler config
         copy:
           src: "{{ playbook_dir }}/../../../configs/kube-scheduler.kubeconfig"
-          dest: "~"
+          dest: "{{ dest }}"
