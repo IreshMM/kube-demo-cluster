@@ -1,0 +1,83 @@
+---
+  - name: Download and install kubernetes binaries
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Download and install binaries
+        get_url:
+          url: "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/{{ item }}"
+          mode: "+x"
+          dest: /usr/local/bin/
+        loop:
+          - kube-apiserver
+          - kube-controller-manager
+          - kube-scheduler
+          - kubectl
+
+  - name: Configure API server
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Create kubernetes config directories
+        file:
+          path: "{{ item }}"
+          state: directory
+        loop:
+          - /etc/kubernetes/config
+          - /var/lib/kubernetes
+      - name: Copy kubernetes certs and keys for the api server
+        copy:
+          src: "{{ playbook_dir }}/../../../certs/{{ item }}"
+          dest: /var/lib/kubernetes/
+        loop:
+          - ca.pem
+          - ca-key.pem
+          - kubernetes.pem
+          - kubernetes-key.pem
+          - service-account.pem
+          - service-account-key.pem
+      - name: Copy encryption config for data at rest
+        copy:
+          src: "{{ playbook_dir }}/../../../encryption-config/encryption-config.yaml"
+          dest: /var/lib/kubernetes/
+      - name: Create systemd service for api server
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-api-server.sh"
+
+  - name: Configure controller manager
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Copy kubeconfig to config directory
+        copy:
+          src: "{{ playbook_dir }}/../../../configs/kube-controller-manager.kubeconfig"
+          dest: /var/lib/kubernetes/
+      - name: Create systemd service for controller manager
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-controller-manager.sh"
+
+  - name: Configure kubernetes scheduler
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Copy kubeconfig to config directory
+        copy:
+          src: "{{ playbook_dir }}/../../../configs/kube-scheduler.kubeconfig"
+          dest: /var/lib/kubernetes/
+      - name: Create KubeSchedulerConfiguration
+        copy:
+          src: "{{ playbook_dir }}/../../../configs/kube-scheduler.yaml"
+          dest: /etc/kubernetes/config/
+      - name: Create kube scheduler systemd service
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-scheduler.sh"
+  
+  - name: Bring up control services
+    hosts: control_plane
+    become: true
+    tasks:
+      - name: Start services
+        shell: |
+          systemctl daemon-reload
+          systemctl enable kube-apiserver kube-controller-manager kube-scheduler
+          systemctl start kube-apiserver kube-controller-manager kube-scheduler
