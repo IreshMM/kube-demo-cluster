@@ -1,0 +1,148 @@
+---
+  - name: Configure worker nodes
+    hosts: workers
+    become: true
+    tasks:
+      - name: Ensure br_netfilter module is loaded
+        command: modprobe br_netfilter
+      - name: Ensure swap is off
+        shell: |
+          swapoff -a
+          sed -i.bak '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+      - name: Update system
+        apt:
+          name: "*"
+          state: latest
+      - name: Install OS dependencies
+        apt:
+          name: "{{ item }}"
+          state: latest
+        loop:
+          - socat
+          - conntrack
+          - ipset
+
+  - name: Download and install container runtime binaries
+    hosts: workers
+    become: true
+    tasks:
+      - name: Download container runtime binaries
+        get_url:
+          url: "{{ item }}"
+          dest: /tmp/
+        loop:
+          - https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.18.0/crictl-v1.18.0-linux-amd64.tar.gz
+          - https://github.com/opencontainers/runc/releases/download/v1.0.0-rc91/runc.amd64
+          - https://github.com/containernetworking/plugins/releases/download/v0.8.6/cni-plugins-linux-amd64-v0.8.6.tgz
+          - https://github.com/containerd/containerd/releases/download/v1.3.6/containerd-1.3.6-linux-amd64.tar.gz
+      - name: Make config directories
+        file:
+          path: "{{ item }}"
+          mode: 0700
+          state: directory
+        loop:
+          - /etc/cni/net.d
+          - /opt/cni/bin
+          - /var/lib/kubelet
+          - /var/lib/kube-proxy
+          - /var/lib/kubernetes
+          - /var/run/kubernetes
+          - /tmp/crictl
+      - name: Install crictl
+        unarchive:
+          src: /tmp/crictl-v1.18.0-linux-amd64.tar.gz
+          dest: /usr/local/bin/
+          mode: +x
+          remote_src: yes
+          extra_opts:
+            - "crictl"
+      - name: Install runc
+        copy:
+          src: /tmp/runc.amd64
+          dest: /usr/local/bin/runc
+          mode: +x
+          remote_src: yes
+      - name: Install CNI plugins
+        unarchive:
+          src: /tmp/cni-plugins-linux-amd64-v0.8.6.tgz
+          dest: /opt/cni/bin/
+          mode: +x
+          remote_src: yes
+      - name: Install containerd
+        unarchive:
+          src: /tmp/containerd-1.3.6-linux-amd64.tar.gz
+          dest: /bin/
+          remote_src: yes
+          extra_opts:
+            - --strip-components=1
+
+  - name: Download and install kubernetes worker component binaries
+    hosts: workers
+    become: true
+    tasks:
+      - name: Download and install kubectl, kube-proxy, kubelet
+        get_url:
+          url: "https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/{{ item }}"
+          dest: /usr/local/bin/
+          mode: +x
+        loop:
+          - kubectl
+          - kube-proxy
+          - kubelet
+
+
+  - name: Configure conatainer runtime
+    hosts: workers
+    become: true
+    tasks:
+      - name: Configure CNI networking
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-cni-networking.sh"
+      - name: Configure containerd
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-containerd.sh"
+  
+  - name: Configure kubelet
+    hosts: workers
+    become: true
+    tasks:
+      - name: Copy kubelet cert and private key
+        copy:
+          src: "{{ playbook_dir }}/../../../certs/{{ item }}"
+          dest: /var/lib/kubelet/
+        loop:
+          - "{{ hostname }}.pem"
+          - "{{ hostname }}-key.pem"
+      - name: Copy kubernetes CA certificate
+        copy:
+          src: "{{ playbook_dir }}/../../../certs/ca.pem"
+          dest: /var/lib/kubernetes
+      - name: Copy kubelet kubeconfig
+        copy:
+          src: "{{ playbook_dir }}/../../../configs/{{ hostname }}.kubeconfig"
+          dest: /var/lib/kubelet/kubeconfig
+      - name: Create kubelet-config yaml and systemd service
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-kubelet.sh"
+    
+  - name: Configure kube-proxy
+    hosts: workers
+    become: true
+    tasks:
+      - name: Copy kube-proxy config
+        copy:
+          src: "{{ playbook_dir }}/../../../configs/kube-proxy.kubeconfig"
+          dest: /var/lib/kube-proxy/kubeconfig
+      - name: Create kube-config-proxy-config yaml and systemd service
+        script:
+          cmd: "{{ playbook_dir }}/scripts/configure-kube-proxy.sh"
+
+  - name: Bring up worker services
+    hosts: workers
+    become: true
+    tasks:
+      - name: Start systemd services
+        shell: |
+          systemctl daemon-reload
+          systemctl enable containerd kubelet kube-proxy
+          systemctl start containerd kubelet kube-proxy
