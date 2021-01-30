@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "google" {
-    project = "kube-demo-302906"
+    project = "kube-demo1-303310"
     region = "us-west1"
     zone = "us-west1-c"
 }
