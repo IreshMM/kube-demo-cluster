@@ -53,6 +53,7 @@ resource "google_compute_instance" "workers" {
 
   metadata = {
     "ssh-keys" = "iresh:${file("~/.ssh/id_rsa.pub")}"
+    "pod-cidr" = "10.200.2${count.index}.0/24"
   }
 
   tags = ["kubernetes-the-hard-way", "worker"]

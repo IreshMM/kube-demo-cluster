@@ -39,6 +39,14 @@ resource "google_compute_firewall" "allow_external" {
   depends_on    = [google_compute_network.kube_network, google_compute_subnetwork.kube_subnet]
 }
 
+resource "google_compute_route" "kubernetes_route" {
+  count = 1
+  name = "kubernetes-route-10-200-${count.index}-0-24"
+  network = google_compute_network.kube_network.name
+  next_hop_ip = "10.240.0.2${count.index}"
+  dest_range = "10.200.${count.index}.0/24"
+}
+
 resource "google_compute_address" "public_address" {
   name   = "kube-external-ip"
   region = var.cluster_region
